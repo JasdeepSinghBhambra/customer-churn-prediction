@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Churn Prediction</title>
+    <style>
+        :root{
+            --bg: #0b1620;
+            --card:#0f2230;
+            --text:#e6f2f8;
+            --muted:#9fb7c6;
+            --primary:#17a2b8;
+            --primary-dark:#0e7580;
+            --input-bg:#0b1722;
+            --input-border:#274051;
+            --success-bg:rgba(16,185,129,0.12);
+            --success-border:#0f766e;
+            --success-text:#d1fae5;
+            --danger-bg:rgba(239,68,68,0.08);
+            --danger-border:#ef4444;
+            --danger-text:#ffd7d7;
+        }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background-color: var(--bg); 
+            margin: 0; 
+            padding: 0; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            color: var(--text);
+        }
+        .container { 
+            background-color: var(--card); 
+            padding: 30px; 
+            border-radius: 12px; 
+            box-shadow: 0 8px 30px rgba(2,6,23,0.6); 
+            width: 100%; 
+            max-width: 900px; 
+            margin: 20px; 
+            border: 1px solid rgba(255,255,255,0.03);
+        }
+        h1 { 
+            text-align: center; 
+            color: var(--text); 
+            margin-bottom: 20px; 
+        }
+        .form-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); 
+            gap: 16px; 
+        }
+        .form-group { 
+            display: flex; 
+            flex-direction: column; 
+        }
+        label { 
+            margin-bottom: 6px; 
+            color: var(--muted); 
+            font-weight: 600; 
+            font-size: 14px; 
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+        }
+        .range { 
+            font-size: 12px; 
+            color: var(--muted); 
+            font-weight: 400;
+        }
+        input, select { 
+            padding: 10px; 
+            border: 1px solid var(--input-border); 
+            border-radius: 6px; 
+            font-size: 14px; 
+            transition: border-color 0.18s, background-color 0.18s; 
+            background-color: var(--input-bg);
+            color: var(--text);
+        }
+        input::placeholder{ color: rgba(255,255,255,0.18); }
+        input:focus, select:focus { 
+            border-color: var(--primary); 
+            outline: none; 
+            box-shadow: 0 0 0 3px rgba(23,162,184,0.08);
+        }
+        button { 
+            grid-column: 1 / -1; 
+            padding: 12px; 
+            background-color: var(--primary); 
+            color: white; 
+            border: none; 
+            border-radius: 8px; 
+            font-size: 16px; 
+            cursor: pointer; 
+            transition: background-color 0.18s, transform 0.08s; 
+            margin-top: 10px; 
+        }
+        button:hover { 
+            background-color: var(--primary-dark); 
+            transform: translateY(-1px);
+        }
+        #result { 
+            margin-top: 20px; 
+            padding: 15px; 
+            text-align: center; 
+            font-size: 18px; 
+            font-weight: bold; 
+            border-radius: 6px; 
+            display: none; 
+        }
+        .success { 
+            background-color: var(--success-bg); 
+            color: var(--text); 
+            border: 1px solid var(--success-border); 
+        }
+        .danger { 
+            background-color: var(--danger-bg); 
+            color: var(--text); 
+            border: 1px solid var(--danger-border); 
+        }
+        .invalid {
+            border-color: var(--danger-border) !important;
+            box-shadow: 0 0 0 3px rgba(239,68,68,0.06);
+        }
+        .err-msg {
+            color: var(--danger-text);
+            font-size: 12px;
+            margin-top: 6px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Customer Churn Prediction</h1>
+        <form id="prediction-form">
+            <div class="form-grid">
+                <div class="form-group"><label>State</label>
+                    <select id="State" name="State" required>
+                        {% for s in state_options %}
+                        <option value="{{ s }}">{{ s }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group"><label>Account Length <span class="range">{% if limits.get('Account Length') %}{{ '%.2f' % limits['Account Length']['min'] }} - {{ '%.2f' % limits['Account Length']['max'] }}{% else %}any{% endif %}</span></label>
+                    <input type="number" id="Account Length" name="Account Length" value="0" placeholder="0" required>
+                </div>
+                <div class="form-group"><label>Area Code <span class="range">{% if limits.get('Area Code') %}{{ '%.2f' % limits['Area Code']['min'] }} - {{ '%.2f' % limits['Area Code']['max'] }}{% else %}any{% endif %}</span></label>
+                    <input type="number" id="Area Code" name="Area Code" value="0" placeholder="0" required>
+                </div>
+                <div class="form-group"><label>Phone</label><input type="text" id="Phone" name="Phone" value="0" placeholder="0" required></div>
+                <div class="form-group"><label>Int'l Plan</label><select id="Int'l Plan" name="Int'l Plan"><option value="no">No</option><option value="yes">Yes</option></select></div>
+                <div class="form-group"><label>VMail Plan</label><select id="VMail Plan" name="VMail Plan"><option value="yes">Yes</option><option value="no">No</option></select></div>
+                <div class="form-group"><label>VMail Message <span class="range">{% if limits.get('VMail Message') %}{{ '%.2f' % limits['VMail Message']['min'] }} - {{ '%.2f' % limits['VMail Message']['max'] }}{% else %}any{% endif %}</span></label>
+                    <input type="number" id="VMail Message" name="VMail Message" value="0" placeholder="0" required>
+                </div>
+                <div class="form-group"><label>Day Mins <span class="range">{% if limits.get('Day Mins') %}{{ '%.2f' % limits['Day Mins']['min'] }} - {{ '%.2f' % limits['Day Mins']['max'] }}{% else %}any{% endif %}</span></label>
+                    <input type="number" step="0.01" id="Day Mins" name="Day Mins" value="0" placeholder="0" required>
+                </div>
+                <div class="form-group"><label>Day Calls <span class="range">{% if limits.get('Day Calls') %}{{ '%.2f' % limits['Day Calls']['min'] }} - {{ '%.2f' % limits['Day Calls']['max'] }}{% else %}any{% endif %}</span></label>
+                    <input type="number" id="Day Calls" name="Day Calls" value="0" placeholder="0" required>
+                </div>
+                <div class="form-group"><label>Day Charge <span class="range">{% if limits.get('Day Charge') %}{{ '%.2f' % limits['Day Charge']['min'] }} - {{ '%.2f' % limits['Day Charge']['max'] }}{% else %}any{% endif %}</span></label>
+                    <input type="number" step="0.01" id="Day Charge" name="Day Charge" value="0" placeholder="0" required>
+                </div>
+                <div class="form-group"><label>Eve Mins</label><input type="number" step="0.01" id="Eve Mins" name="Eve Mins" value="0" placeholder="0" required></div>
+                <div class="form-group"><label>Eve Calls <span class="range">{% if limits.get('Eve Calls') %}{{ '%.2f' % limits['Eve Calls']['min'] }} - {{ '%.2f' % limits['Eve Calls']['max'] }}{% else %}any{% endif %}</span></label>
+                    <input type="number" id="Eve Calls" name="Eve Calls" value="0" placeholder="0" required>
+                </div>
+                <div class="form-group"><label>Eve Charge <span class="range">{% if limits.get('Eve Charge') %}{{ '%.2f' % limits['Eve Charge']['min'] }} - {{ '%.2f' % limits['Eve Charge']['max'] }}{% else %}any{% endif %}</span></label>
+                    <input type="number" step="0.01" id="Eve Charge" name="Eve Charge" value="0" placeholder="0" required>
+                </div>
+                <div class="form-group"><label>Night Mins <span class="range">{% if limits.get('Night Mins') %}{{ '%.2f' % limits['Night Mins']['min'] }} - {{ '%.2f' % limits['Night Mins']['max'] }}{% else %}any{% endif %}</span></label>
+                    <input type="number" step="0.01" id="Night Mins" name="Night Mins" value="0" placeholder="0" required>
+                </div>
+                <div class="form-group"><label>Night Calls <span class="range">{% if limits.get('Night Calls') %}{{ '%.2f' % limits['Night Calls']['min'] }} - {{ '%.2f' % limits['Night Calls']['max'] }}{% else %}any{% endif %}</span></label>
+                    <input type="number" id="Night Calls" name="Night Calls" value="0" placeholder="0" required>
+                </div>
+                <div class="form-group"><label>Night Charge <span class="range">{% if limits.get('Night Charge') %}{{ '%.2f' % limits['Night Charge']['min'] }} - {{ '%.2f' % limits['Night Charge']['max'] }}{% else %}any{% endif %}</span></label>
+                    <input type="number" step="0.01" id="Night Charge" name="Night Charge" value="0" placeholder="0" required>
+                </div>
+                <div class="form-group"><label>Intl Mins <span class="range">{% if limits.get('Intl Mins') %}{{ '%.2f' % limits['Intl Mins']['min'] }} - {{ '%.2f' % limits['Intl Mins']['max'] }}{% else %}any{% endif %}</span></label>
+                    <input type="number" step="0.01" id="Intl Mins" name="Intl Mins" value="0" placeholder="0" required>
+                </div>
+                <div class="form-group"><label>Intl Calls <span class="range">{% if limits.get('Intl Calls') %}{{ '%.2f' % limits['Intl Calls']['min'] }} - {{ '%.2f' % limits['Intl Calls']['max'] }}{% else %}any{% endif %}</span></label>
+                    <input type="number" id="Intl Calls" name="Intl Calls" value="0" placeholder="0" required>
+                </div>
+                <div class="form-group"><label>Intl Charge <span class="range">{% if limits.get('Intl Charge') %}{{ '%.2f' % limits['Intl Charge']['min'] }} - {{ '%.2f' % limits['Intl Charge']['max'] }}{% else %}any{% endif %}</span></label>
+                    <input type="number" step="0.01" id="Intl Charge" name="Intl Charge" value="0" placeholder="0" required>
+                </div>
+                <div class="form-group"><label>CustServ Calls <span class="range">{% if limits.get('CustServ Calls') %}{{ '%.2f' % limits['CustServ Calls']['min'] }} - {{ '%.2f' % limits['CustServ Calls']['max'] }}{% else %}any{% endif %}</span></label>
+                    <input type="number" id="CustServ Calls" name="CustServ Calls" value="0" placeholder="0" required>
+                </div>
+                <button type="submit">Predict Churn</button>
+            </div>
+        </form>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        // Limits object provided by server (Jinja -> JSON)
+        const limits = {{ limits | tojson | safe }};
+
+        function showFieldError(inputEl, message) {
+            inputEl.classList.add('invalid');
+            let msg = inputEl.parentElement.querySelector('.err-msg');
+            if (!msg) {
+                msg = document.createElement('div');
+                msg.className = 'err-msg';
+                inputEl.parentElement.appendChild(msg);
+            }
+            msg.textContent = message;
+        }
+
+        function clearFieldError(inputEl) {
+            inputEl.classList.remove('invalid');
+            const msg = inputEl.parentElement.querySelector('.err-msg');
+            if (msg) msg.textContent = '';
+        }
+
+        function validateField(inputEl) {
+            const name = inputEl.name;
+            if (!limits || !limits[name]) {
+                clearFieldError(inputEl);
+                return true;
+            }
+            const lim = limits[name];
+            const raw = inputEl.value;
+            if (raw === null || raw === undefined || raw.toString().trim() === '') {
+                showFieldError(inputEl, 'Value required');
+                return false;
+            }
+            const num = Number(raw);
+            if (isNaN(num)) {
+                showFieldError(inputEl, 'Must be a number');
+                return false;
+            }
+            if (lim.min !== undefined && num < lim.min) {
+                showFieldError(inputEl, `Minimum allowed is ${lim.min.toFixed(2)}`);
+                return false;
+            }
+            if (lim.max !== undefined && num > lim.max) {
+                showFieldError(inputEl, `Maximum allowed is ${lim.max.toFixed(2)}`);
+                return false;
+            }
+            clearFieldError(inputEl);
+            return true;
+        }
+
+        // Attach listeners to inputs that have corresponding limits
+        document.querySelectorAll('#prediction-form input, #prediction-form select').forEach(el => {
+            el.addEventListener('input', () => validateField(el));
+        });
+
+        document.getElementById('prediction-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const formEl = this;
+            const inputs = Array.from(formEl.querySelectorAll('input, select'));
+            let ok = true;
+            inputs.forEach(inp => {
+                if (!validateField(inp)) ok = false;
+            });
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'none';
+            resultDiv.className = '';
+            if (!ok) {
+                resultDiv.textContent = 'Please fix input errors highlighted in red.';
+                resultDiv.classList.add('danger');
+                resultDiv.style.display = 'block';
+                return;
+            }
+
+            const formData = new FormData(this);
+            const data = {};
+            formData.forEach((value, key) => {
+                data[key] = isNaN(value) || value.trim() === '' ? value : Number(value);
+            });
+
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const resData = await response.json();
+
+                if (resData.error) {
+                    resultDiv.textContent = 'Error: ' + resData.error;
+                    resultDiv.classList.add('danger');
+                } else {
+                    if(resData.prediction === 1) {
+                        resultDiv.textContent = 'Prediction: Customer WILL Churn 🛑';
+                        resultDiv.classList.add('danger');
+                    } else {
+                        resultDiv.textContent = 'Prediction: Customer will NOT Churn ✅';
+                        resultDiv.classList.add('success');
+                    }
+                }
+                resultDiv.style.display = 'block';
+            } catch (error) {
+                console.error('Error:', error);
+                resultDiv.textContent = 'An error occurred while predicting.';
+                resultDiv.classList.add('danger');
+                resultDiv.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>
